@@ -18,6 +18,7 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.BounceInterpolator;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,6 +31,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
 
+import com.bumptech.glide.Glide;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.BaseActivity;
@@ -43,6 +45,8 @@ import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.ui.adapter.HomePageAdapter;
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
 import com.github.tvbox.osc.ui.adapter.SortAdapter;
+import androidx.appcompat.app.AlertDialog;
+
 import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.ui.dialog.TipDialog;
 import com.github.tvbox.osc.ui.fragment.GridFragment;
@@ -85,6 +89,7 @@ public class HomeActivity extends BaseActivity {
     private LinearLayout contentLayout;
     private TextView tvDate;
     private TextView tvName;
+    private ImageView ivLogo;
     private TvRecyclerView mGridView;
     private NoScrollViewPager mViewPager;
     private SourceViewModel sourceViewModel;
@@ -172,6 +177,7 @@ public class HomeActivity extends BaseActivity {
         this.topLayout = findViewById(R.id.topLayout);
         this.tvDate = findViewById(R.id.tvDate);
         this.tvName = findViewById(R.id.tvName);
+        this.ivLogo = findViewById(R.id.ivLogo);
         this.contentLayout = findViewById(R.id.contentLayout);
         this.mGridView = findViewById(R.id.mGridView);
         this.mViewPager = findViewById(R.id.mViewPager);
@@ -358,8 +364,44 @@ public class HomeActivity extends BaseActivity {
     private boolean jarInitOk = false;
     private TipDialog mConfigErrorDialog;
 
+    /** 配置自带 logo 品牌标识：左上角显示 */
+    private void applyConfigBranding() {
+        try {
+            if (ivLogo == null) return;
+            String logo = ApiConfig.get().getLogo();
+            if (logo == null || logo.trim().isEmpty()) {
+                ivLogo.setVisibility(View.GONE);
+                return;
+            }
+            ivLogo.setVisibility(View.VISIBLE);
+            Glide.with(this).load(logo).into(ivLogo);
+        } catch (Throwable th) {
+            th.printStackTrace();
+        }
+    }
+
+    /** 配置自带 notice 公告：仅在公告内容变化时弹一次 */
+    private void showConfigNotice() {
+        try {
+            String notice = ApiConfig.get().getNotice();
+            if (notice == null || notice.trim().isEmpty()) return;
+            if (notice.equals(Hawk.get(HawkConfig.CONFIG_NOTICE_SHOWN, ""))) return;
+            Hawk.put(HawkConfig.CONFIG_NOTICE_SHOWN, notice);
+            new AlertDialog.Builder(this)
+                    .setTitle("公告")
+                    .setMessage(notice)
+                    .setCancelable(true)
+                    .setPositiveButton("知道了", null)
+                    .show();
+        } catch (Throwable th) {
+            th.printStackTrace();
+        }
+    }
+
     private void initData() {
         if (dataInitOk && jarInitOk) {
+            showConfigNotice();
+            applyConfigBranding();
             loadHomeSort(false);
             if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 LOG.e("有");

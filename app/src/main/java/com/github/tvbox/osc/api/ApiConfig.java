@@ -81,6 +81,8 @@ public class ApiConfig {
     private Map<String,String> myHosts;
     private List<IJKCode> ijkCodes;
     private String spider = null;
+    private String notice = "";
+    private String logo = "";
     private String currentPyKey = "";
     private String currentLivePyKey = "";
     private String currentPlaySourceKey = "";
@@ -746,6 +748,9 @@ public class ApiConfig {
         danmaku = DefaultConfig.safeJsonString(infoJson, "danmaku", "");
         // wallpaper
         wallpaper = DefaultConfig.safeJsonString(infoJson, "wallpaper", "");
+        // notice 配置公告（可选字段，加载成功后弹一次）
+        notice = DefaultConfig.safeJsonString(infoJson, "notice", "");
+        logo = DefaultConfig.safeJsonString(infoJson, "logo", "");
         // 远端站点源
         SourceBean firstSite = null;
         for (JsonElement opt : infoJson.get("sites").getAsJsonArray()) {
@@ -1445,6 +1450,14 @@ public class ApiConfig {
 
     public String getSpider() {
         return spider;
+    }
+
+    public String getNotice() {
+        return notice == null ? "" : notice;
+    }
+
+    public String getLogo() {
+        return logo == null ? "" : logo;
     }
 
     public String getDanmaku() {

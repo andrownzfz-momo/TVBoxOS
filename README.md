@@ -28,6 +28,8 @@ TVBox / 影视仓 系列 Android 直播点播客户端源码 + GitHub Actions �
 4. `pyramid/build.gradle` 对写死的 `D:/Programs/Python/...` 路径加存在性守卫，Windows 本机与 Linux CI 均可配置。
 5. **网页频道类型**：新增 `WebLiveActivity` WebView 容器——频道地址为网页（非 `.m3u8/.mp4` 等流媒体后缀）、或直播源声明了 `format:"stream"` 以外的 `click` 字段时，直播播放自动切换到网页容器（全屏视频、遥控器上下键换台、返回退出），激活上游遗留未消费的 `channelClick` 解析。
 6. 「关于」对话框尾部增加联系邮箱。
+7. **配置公告 `notice`**：配置 JSON 顶层 `notice` 字段在配置加载完成后弹一次公告对话框（内容变化才再弹，Hawk 记录已显示文案）。
+8. **配置品牌 `logo`**：配置 JSON 顶层 `logo` 字段（图片 URL）在首页左上角站名左侧显示品牌标识，为空则隐藏，不占位也不影响原有站名。 
 
 ## 本地构建
 

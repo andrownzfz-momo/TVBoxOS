@@ -66,5 +66,6 @@ public class HawkConfig {
     public static final String DANMU_SIZE_SCALE = "danmu_size_scale";
     public static final String DANMU_RANDOM_COLOR = "danmu_random_color";
     public static final String DANMU_API = "danmu_api";
+    public static final String CONFIG_NOTICE_SHOWN = "config_notice_shown";
     public static boolean hotVodDelete;
 }

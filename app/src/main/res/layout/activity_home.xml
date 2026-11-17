@@ -19,6 +19,17 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/vs_40"
+            android:layout_marginRight="@dimen/vs_10"
+            android:adjustViewBounds="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/tvName"
             android:layout_width="wrap_content"
