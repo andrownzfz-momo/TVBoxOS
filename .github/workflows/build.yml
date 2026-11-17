@@ -1,0 +1,110 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: '同时发布 GitHub Release'
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decode keystore
+        env:
+          TVBOX_KEYSTORE_B64: ${{ secrets.TVBOX_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$TVBOX_KEYSTORE_B64" ]; then
+            echo "$TVBOX_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/TVBoxOS.jks"
+            echo "TVBOX_KEYSTORE=$RUNNER_TEMP/TVBoxOS.jks" >> "$GITHUB_ENV"
+            echo "keystore decoded"
+          else
+            echo "::warning::TVBOX_KEYSTORE_B64 missing, APK will be unsigned"
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install lxml ujson pyquery requests jsonpath cachetools pycryptodome beautifulsoup4
+
+      - name: Prepare local.properties
+        run: echo "" > local.properties
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build With Gradle
+        env:
+          TVBOX_KEYSTORE_PASSWORD: ${{ secrets.TVBOX_KEYSTORE_PASSWORD }}
+          TVBOX_KEY_ALIAS: ${{ secrets.TVBOX_KEY_ALIAS }}
+          TVBOX_KEY_PASSWORD: ${{ secrets.TVBOX_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ARGS=()
+          if [ -n "$TVBOX_KEYSTORE" ]; then
+            ARGS+=("-PRELEASE_STORE_FILE=$TVBOX_KEYSTORE")
+            ARGS+=("-PRELEASE_STORE_PASSWORD=$TVBOX_KEYSTORE_PASSWORD")
+            ARGS+=("-PRELEASE_KEY_ALIAS=$TVBOX_KEY_ALIAS")
+            ARGS+=("-PRELEASE_KEY_PASSWORD=$TVBOX_KEY_PASSWORD")
+          fi
+          ./gradlew assembleJavaRelease --build-cache --parallel "${ARGS[@]}"
+
+      - name: Prepare Apk
+        run: |
+          mkdir -p apk
+          STAMP=$(date +%Y%m%d-%H%M)
+          found=0
+          while IFS= read -r f; do
+            cp "$f" "apk/TVBoxOS_${STAMP}.apk"
+            found=1
+          done < <(find app/build/outputs/apk -name "*release*.apk" -type f)
+          if [ "$found" == "0" ]; then
+            echo "::error::release apk not found"
+            exit 1
+          fi
+          ls -lh apk/
+
+      - name: Upload Apk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TVBoxOS-apk
+          path: apk/*.apk
+          if-no-files-found: error
+
+      - name: Publish Release
+        if: ${{ inputs.release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STAMP=$(ls apk/ | sed -e 's/TVBoxOS_//' -e 's/\.apk//')
+          gh release create "build-$STAMP" apk/*.apk \
+            --title "TVBoxOS build-$STAMP" \
+            --notes "自动构建：基座 q215613905/TVBoxOS @ $(git rev-parse --short HEAD)" || \
+          gh release upload "build-$STAMP" apk/*.apk --clobber

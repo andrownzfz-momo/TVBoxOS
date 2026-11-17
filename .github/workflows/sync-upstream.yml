@@ -1,0 +1,37 @@
+name: sync-upstream
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge upstream q215613905/TVBoxOS
+        run: |
+          git remote add upstream https://github.com/q215613905/TVBoxOS.git || true
+          git fetch upstream main
+          UP=$(git rev-parse upstream/main)
+          echo "upstream=$UP local=$(git rev-parse HEAD)"
+          if git merge-base --is-ancestor "$UP" HEAD; then
+            echo "already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git merge upstream/main --no-edit -m "sync: upstream ${UP}"; then
+            echo "::error::merge conflict with upstream, manual rebase needed"
+            git merge --abort || true
+            exit 1
+          fi
+          git push origin HEAD:main
