@@ -26,6 +26,8 @@ TVBox / 影视仓 系列 Android 直播点播客户端源码 + GitHub Actions �
 2. `versionName` 追加构建时间 `1.0.0.<yyyyMMdd-HHmm>`。
 3. `app/build.gradle` 内置 `RELEASE_*` 属性签名配置（有则签，无则产出未签名包）。
 4. `pyramid/build.gradle` 对写死的 `D:/Programs/Python/...` 路径加存在性守卫，Windows 本机与 Linux CI 均可配置。
+5. **网页频道类型**：新增 `WebLiveActivity` WebView 容器——频道地址为网页（非 `.m3u8/.mp4` 等流媒体后缀）、或直播源声明了 `format:"stream"` 以外的 `click` 字段时，直播播放自动切换到网页容器（全屏视频、遥控器上下键换台、返回退出），激活上游遗留未消费的 `channelClick` 解析。
+6. 「关于」对话框尾部增加联系邮箱。
 
 ## 本地构建
 

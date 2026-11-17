@@ -211,6 +211,19 @@ public class LivePlayActivity extends BaseActivity {
     private ObjectAnimator objectAnimator;
     public String epgStringAddress ="";
 
+    /** 网页频道容器回调：上/下键在 WebLiveActivity 里换台 */
+    private final WebLiveActivity.SwitchListener mWebSwitchListener = new WebLiveActivity.SwitchListener() {
+        @Override
+        public void onSwitchChannel(int direction, WebLiveActivity activity) {
+            if (!isCurrentLiveChannelValid()) {
+                if (activity != null) activity.finish();
+                return;
+            }
+            Integer[] idx = getNextChannel(direction);
+            playChannel(idx[0], idx[1], false);
+        }
+    };
+
     private TvRecyclerView mEpgDateGridView;
     private TvRecyclerView mRightEpgList;
     private LiveEpgDateAdapter liveEpgDateAdapter;
@@ -1331,6 +1344,8 @@ public class LivePlayActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         exitingLivePlay = false;
+        // 网页频道期间不碰播放器，避免 resume 把上一次的流媒体地址拉起来
+        if (WebLiveActivity.current() != null || isWebChannel(currentLiveChannelItem)) return;
         if (mVideoView != null) {
             mVideoView.resume();
         }
@@ -1347,6 +1362,8 @@ public class LivePlayActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
+        WebLiveActivity web = WebLiveActivity.current();
+        if (web != null) web.finish();
         super.onDestroy();
         Hawk.put(HawkConfig.PLAYER_IS_LIVE, false);
         hideSwitchChannelSnapshot();
@@ -1828,6 +1845,26 @@ public class LivePlayActivity extends BaseActivity {
         showBottomEpg();
         backcontroller.setVisibility(View.GONE);
         ll_right_top_huikan.setVisibility(View.GONE);
+        // 网页频道（地址非流媒体 或 配置了 click 字段）交给 WebView 容器播放
+        if (isWebChannel(currentLiveChannelItem)) {
+            if (mVideoView != null) {
+                mVideoView.release();
+            }
+            hideSwitchChannelSnapshot();
+            WebLiveActivity web = WebLiveActivity.current();
+            if (web != null && !web.isFinishing()) {
+                web.loadChannel(currentLiveChannelItem);
+            } else {
+                WebLiveActivity.launch(this, currentLiveChannelItem, mWebSwitchListener);
+            }
+            loadEpgAfterChannelStarted();
+            return true;
+        }
+        // 切回流媒体频道时关闭残留的网页容器
+        WebLiveActivity runningWeb = WebLiveActivity.current();
+        if (runningWeb != null && !runningWeb.isFinishing()) {
+            runningWeb.exitForVideo();
+        }
         if(mVideoView!=null){
             if(liveChannelHeader()!=null)LOG.i("echo-"+liveChannelHeader().toString());
             boolean reusePlayer = canReusePlayer(previousLivePlayerType);
@@ -1857,6 +1894,36 @@ public class LivePlayActivity extends BaseActivity {
         return mVideoView != null
                 && mVideoView.getCurrentPlayState() != VideoView.STATE_IDLE
                 && previousLivePlayerType == currentLivePlayerType;
+    }
+
+    /** 网页频道判定：配置了 click 字段，或地址不是流媒体（详见 isWebUrl） */
+    private boolean isWebChannel(LiveChannelItem item) {
+        if (item == null) return false;
+        if ("stream".equalsIgnoreCase(item.getChannelFormat().trim())) return false;
+        if (!item.getChannelClick().trim().isEmpty()) return true;
+        return isWebUrl(item.getUrl());
+    }
+
+    /** http(s) 且不含流媒体特征的地址按网页处理（如官方直播间 / 电视站网页） */
+    private boolean isWebUrl(String url) {
+        if (url == null) return false;
+        String u = url.trim().toLowerCase(Locale.ROOT);
+        if (!u.startsWith("http://") && !u.startsWith("https://")) return false;
+        // 明确的流媒体特征（含查询串也要拦）
+        String[] streamMarkers = {".m3u8", ".m3u", ".mp4", ".flv", ".mkv", ".avi", ".mov", ".mpd", ".aac", ".mp3", ".webm"};
+        for (String marker : streamMarkers) {
+            if (u.contains(marker)) return false;
+        }
+        String path = u;
+        int qi = path.indexOf('?');
+        if (qi >= 0) path = path.substring(0, qi);
+        int hi = path.indexOf('#');
+        if (hi >= 0) path = path.substring(0, hi);
+        String[] streamSuffix = {".ts", ".rmvb", ".rm", ".wmv", ".3gp", ".hls"};
+        for (String ext : streamSuffix) {
+            if (path.endsWith(ext)) return false;
+        }
+        return true;
     }
 
     private void loadEpgAfterChannelStarted() {
@@ -2034,6 +2101,7 @@ public class LivePlayActivity extends BaseActivity {
                     return;
                 }
                 if (now.after(selectedData.enddateTime) && !canCurrentChannelCatchup()) return;
+                if (isWebChannel(currentLiveChannelItem)) return;
                 currentLiveLookBackIndex=position;
                 epgListAdapter.setSelectedEpgIndex(position);
                 if (now.compareTo(selectedData.startdateTime) >= 0 && now.compareTo(selectedData.enddateTime) <= 0) {
@@ -2101,6 +2169,7 @@ public class LivePlayActivity extends BaseActivity {
                     return;
                 }
                 if (now.after(selectedData.enddateTime) && !canCurrentChannelCatchup()) return;
+                if (isWebChannel(currentLiveChannelItem)) return;
                 currentLiveLookBackIndex=position;
                 epgListAdapter.setSelectedEpgIndex(position);
                 if (now.compareTo(selectedData.startdateTime) >= 0 && now.compareTo(selectedData.enddateTime) <= 0) {
