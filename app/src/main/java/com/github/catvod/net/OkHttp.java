@@ -4,6 +4,7 @@ import androidx.collection.ArrayMap;
 
 import com.github.tvbox.osc.util.SSL.SSLSocketFactoryCompat;
 import com.github.tvbox.osc.util.OkGoHelper;
+import com.github.tvbox.osc.util.urlhttp.BrotliInterceptor;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -34,8 +35,8 @@ public class OkHttp {
     public static synchronized OkHttpClient client() {
         if (client != null) return client;
         OkHttpClient base = OkGoHelper.getDefaultClient();
-        if (base != null) return client = base.newBuilder().dns(dns()).build();
-        OkHttpClient.Builder builder = new OkHttpClient.Builder().dns(dns()).proxySelector(OkGoHelper.proxySelector()).proxyAuthenticator(OkGoHelper.proxyAuthenticator()).connectTimeout(TIMEOUT, TimeUnit.MILLISECONDS).readTimeout(TIMEOUT, TimeUnit.MILLISECONDS).writeTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+        if (base != null) return client = base.newBuilder().addInterceptor(new BrotliInterceptor()).dns(dns()).build();
+        OkHttpClient.Builder builder = new OkHttpClient.Builder().addInterceptor(new BrotliInterceptor()).dns(dns()).proxySelector(OkGoHelper.proxySelector()).proxyAuthenticator(OkGoHelper.proxyAuthenticator()).connectTimeout(TIMEOUT, TimeUnit.MILLISECONDS).readTimeout(TIMEOUT, TimeUnit.MILLISECONDS).writeTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
         setOkHttpSsl(builder);
         return client = builder.build();
     }

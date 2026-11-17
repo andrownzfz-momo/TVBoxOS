@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+def buildTime() {
+    return new Date().format("yyyyMMdd-HHmm")
+}
+
 android {
     compileSdkVersion 33
 
@@ -7,7 +11,7 @@ android {
         applicationId 'com.github.tvbox.osc.jun'
         targetSdkVersion 28
         versionCode 1
-        versionName '1.0.0'
+        versionName '1.0.0.' + buildTime()
         multiDexEnabled true
         //设置room的Schema的位置
         javaCompileOptions {
@@ -96,12 +100,28 @@ android {
         }
     }
 
+    signingConfigs {
+        if (project.hasProperty("RELEASE_STORE_FILE") && RELEASE_STORE_FILE) {
+            release {
+                storeFile file(RELEASE_STORE_FILE)
+                storePassword RELEASE_STORE_PASSWORD
+                keyAlias RELEASE_KEY_ALIAS
+                keyPassword RELEASE_KEY_PASSWORD
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
+        }
+    }
+
     buildTypes {
         debug {
             minifyEnabled false
         }
         release {
             minifyEnabled true
+            if (project.hasProperty("RELEASE_STORE_FILE") && RELEASE_STORE_FILE) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

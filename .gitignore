@@ -97,7 +97,7 @@ lint/tmp/
 .idea/
 
 *.hprof
-*.md
+.signing/
 .temp/
 output-metadata.json
 .py/
