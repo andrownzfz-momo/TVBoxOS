@@ -10,8 +10,9 @@ android {
         minSdkVersion 19
         targetSdkVersion 28
         python {
-            if (file("D:/Programs/Python/Python38/python.exe").exists()) {
-                buildPython("D:/Programs/Python/Python38/python.exe")
+            def localPython = "D:/Programs/Python/Python38/python.exe"
+            if (new File(localPython).exists()) {
+                buildPython(localPython)
             }
             pip {
                 install "lxml"
