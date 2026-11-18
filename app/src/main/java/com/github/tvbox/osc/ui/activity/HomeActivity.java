@@ -371,9 +371,12 @@ public class HomeActivity extends BaseActivity {
             String logo = ApiConfig.get().getLogo();
             if (logo == null || logo.trim().isEmpty()) {
                 ivLogo.setVisibility(View.GONE);
+                tvName.setVisibility(View.VISIBLE);
                 return;
             }
             ivLogo.setVisibility(View.VISIBLE);
+            // logo 已含品牌字标，隐藏左侧站名文字避免重复
+            tvName.setVisibility(View.GONE);
             Glide.with(this).load(logo).into(ivLogo);
         } catch (Throwable th) {
             th.printStackTrace();
